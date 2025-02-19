@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Portfolio{% endblock %}
+{% block content %}
+<h1>Portfolio</h1>
+<p>Cash Account: {{ user.cash_account }}</p>
+
+<!-- Add Cash Form -->
+<h2>Add Cash</h2>
+<form method="post" action="{{ url_for('add_cash') }}" novalidate>
+    {{ add_cash_form.hidden_tag() }}
+    <div class="form-group">
+        {{ add_cash_form.amount.label(class="form-label") }}
+        {{ add_cash_form.amount(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ add_cash_form.submit(class="btn btn-primary") }}
+    </div>
+</form>
+
+<!-- Withdraw Cash Form -->
+<h2>Withdraw Cash</h2>
+<form method="post" action="{{ url_for('withdraw_cash') }}" novalidate>
+    {{ withdraw_cash_form.hidden_tag() }}
+    <div class="form-group">
+        {{ withdraw_cash_form.amount.label(class="form-label") }}
+        {{ withdraw_cash_form.amount(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ withdraw_cash_form.submit(class="btn btn-primary") }}
+    </div>
+</form>
+
+<!-- Display user's stocks -->
+<h2>Your Stocks</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Ticker</th>
+            <th>Company</th>
+            <th>Amount</th>
+            <th>Current Price</th>
+            <th>Total Value</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for stock in user.stocks %}
+        <tr>
+            <td>{{ stock.ticker }}</td>
+            <td>{{ stock.company_name }}</td>
+            <td>{{ stock.amount }}</td>
+            <td>{{ stock.current_price }}</td>
+            <td>{{ stock.amount * stock.current_price }}</td>
+            <td>
+                <form action="{{ url_for('buy_stock') }}" method="post" style="display:inline;">
+                    <input type="hidden" name="stock_id" value="{{ stock.id }}">
+                    <input type="number" name="amount" min="1" placeholder="Amount" required>
+                    <button type="submit" class="btn btn-success">Buy</button>
+                </form>
+                <form action="{{ url_for('sell_stock') }}" method="post" style="display:inline;">
+                    <input type="hidden" name="stock_id" value="{{ stock.id }}">
+                    <input type="number" name="amount" min="1" placeholder="Amount" required>
+                    <button type="submit" class="btn btn-danger">Sell</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

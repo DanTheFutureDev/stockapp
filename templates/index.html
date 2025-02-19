@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Stock Trading System{% endblock %}
+{% block content %}
+<h1>Available Stocks</h1>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Ticker</th>
+            <th>Company</th>
+            <th>Price</th>
+            <th>Volume</th>
+            <th>Market Cap</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for stock in stocks %}
+        <tr>
+            <td>{{ stock.ticker }}</td>
+            <td>{{ stock.company_name }}</td>
+            <td>{{ stock.current_price }}</td>
+            <td>{{ stock.volume }}</td>
+            <td>{{ stock.volume * stock.current_price }}</td>
+            <td>
+                <form action="{{ url_for('buy_stock') }}" method="post" style="display:inline;">
+                    <input type="hidden" name="stock_id" value="{{ stock.id }}">
+                    <input type="number" name="amount" min="1" placeholder="Amount" required>
+                    <button type="submit" class="btn btn-success">Buy</button>
+                </form>
+                <form action="{{ url_for('sell_stock') }}" method="post" style="display:inline;">
+                    <input type="hidden" name="stock_id" value="{{ stock.id }}">
+                    <input type="number" name="amount" min="1" placeholder="Amount" required>
+                    <button type="submit" class="btn btn-danger">Sell</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

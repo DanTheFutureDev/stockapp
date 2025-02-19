@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Market Schedule{% endblock %}
+{% block content %}
+<h1>Market Schedule</h1>
+<form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <!-- Add form fields for market schedule -->
+    <div class="form-group">
+        {{ form.submit(class="btn btn-primary") }}
+    </div>
+</form>
+{% endblock %}

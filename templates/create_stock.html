@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Create Stock{% endblock %}
+{% block content %}
+<h1>Create Stock</h1>
+<form method="post" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+        {{ form.company_name.label(class="form-label") }}
+        {{ form.company_name(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ form.ticker.label(class="form-label") }}
+        {{ form.ticker(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ form.volume.label(class="form-label") }}
+        {{ form.volume(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ form.initial_price.label(class="form-label") }}
+        {{ form.initial_price(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ form.submit(class="btn btn-primary") }}
+    </div>
+</form>
+{% endblock %}
