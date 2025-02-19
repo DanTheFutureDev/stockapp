@@ -5,5 +5,7 @@
 <a href="{{ url_for('create_stock') }}" class="btn btn-primary">Create Stock</a>
 <a href="{{ url_for('market_hours') }}" class="btn btn-primary">Market Hours</a>
 <a href="{{ url_for('market_schedule') }}" class="btn btn-primary">Market Schedule</a>
-<a href="{{ url_for('update_stock_price') }}" class="btn btn-primary">Update Stock Prices</a>
+<form action="{{ url_for('process_pending_orders') }}" method="post" style="display:inline;">
+    <button type="submit" class="btn btn-danger">Process Pending Orders</button>
+</form>
 {% endblock %}

@@ -11,6 +11,7 @@ class User(db.Model):
     cash_account = db.Column(db.Float, default=0.0)  # User's balance
     is_admin = db.Column(db.Boolean, default=False)
     transactions = db.relationship('Transaction', backref='user', lazy=True)
+    orders = db.relationship('Order', backref='user', lazy=True)
     # ...other fields...
 
 class Stock(db.Model):
@@ -21,19 +22,10 @@ class Stock(db.Model):
     initial_price = db.Column(db.Float)
     current_price = db.Column(db.Float)
     transactions = db.relationship('Transaction', backref='stock', lazy=True)
+    orders = db.relationship('Order', backref='stock', lazy=True)
     # ...other fields...
 
 class Transaction(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    stock_id = db.Column(db.Integer, db.ForeignKey('stock.id'))
-    transaction_type = db.Column(db.String(10))  # 'buy' or 'sell'
-    amount = db.Column(db.Integer)
-    price = db.Column(db.Float)
-    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
-    # ...other fields...
-
-class TransactionHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     stock_id = db.Column(db.Integer, db.ForeignKey('stock.id'))
@@ -64,10 +56,3 @@ class MarketSchedule(db.Model):
     date = db.Column(db.Date, unique=True)
     description = db.Column(db.String(255))
     is_closed = db.Column(db.Boolean, default=True)
-
-class StockPriceHistory(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    stock_id = db.Column(db.Integer, db.ForeignKey('stock.id'))
-    price = db.Column(db.Float)
-    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
-    stock = db.relationship('Stock', backref=db.backref('price_history', lazy=True))

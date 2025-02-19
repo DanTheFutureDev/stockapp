@@ -1,13 +1,18 @@
 from flask import Flask, render_template, redirect, url_for, request, session, jsonify, flash
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
-from models import db, User, Stock, Transaction, MarketHours, MarketSchedule
+from models import db, User, Stock, Transaction, Order, MarketHours, MarketSchedule
 from forms import RegistrationForm, LoginForm, StockForm, MarketHoursForm, MarketScheduleForm, AddCashForm, WithdrawCashForm, UpdateProfileForm
 from werkzeug.security import generate_password_hash, check_password_hash
+import logging
 
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 @app.template_filter('to_float')
 def to_float(value):
@@ -97,6 +102,30 @@ def transactions():
     transactions = Transaction.query.filter_by(user_id=user.id).all()
     return render_template('transactions.html', transactions=transactions)
 
+@app.route('/orders')
+def orders():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    orders = Order.query.filter_by(user_id=user.id).all()
+    return render_template('orders.html', orders=orders)
+
+@app.route('/cancel_order/<int:order_id>', methods=['POST'])
+def cancel_order(order_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    order = Order.query.get_or_404(order_id)
+    if order.user_id != session['user_id']:
+        flash('You do not have permission to cancel this order.', 'danger')
+        return redirect(url_for('orders'))
+    if order.status == 'pending':
+        order.status = 'cancelled'
+        db.session.commit()
+        flash('Order cancelled successfully.', 'success')
+    else:
+        flash('Order cannot be cancelled.', 'danger')
+    return redirect(url_for('orders'))
+
 @app.route('/admin')
 def admin():
     if 'user_id' not in session:
@@ -184,11 +213,12 @@ def buy_stock():
     total_price = stock.current_price * amount
     if user.cash_account >= total_price:
         user.cash_account -= total_price
-        transaction = Transaction(user_id=user.id, stock_id=stock.id, transaction_type='buy', amount=amount, price=stock.current_price)
-        db.session.add(transaction)
+        order = Order(user_id=user.id, stock_id=stock.id, order_type='buy', amount=amount, price=stock.current_price, status='pending')
+        db.session.add(order)
         db.session.commit()
+        flash('Order placed successfully.', 'success')
     else:
-        flash('You do not have enough money to purchase this stock.', 'danger')
+        flash('You do not have enough money to place this order.', 'danger')
     return redirect(url_for('portfolio'))
 
 @app.route('/sell_stock', methods=['POST'])
@@ -209,10 +239,10 @@ def sell_stock():
         flash('You do not have enough stock to sell.', 'danger')
     else:
         total_price = stock.current_price * amount
-        transaction = Transaction(user_id=user.id, stock_id=stock.id, transaction_type='sell', amount=amount, price=stock.current_price)
-        user.cash_account += total_price
-        db.session.add(transaction)
+        order = Order(user_id=user.id, stock_id=stock.id, order_type='sell', amount=amount, price=stock.current_price, status='pending')
+        db.session.add(order)
         db.session.commit()
+        flash('Order placed successfully.', 'success')
     return redirect(url_for('portfolio'))
 
 @app.route('/add_cash', methods=['POST'])
@@ -284,6 +314,35 @@ def update_stock_price():
         return redirect(url_for('update_stock_price'))
     stocks = Stock.query.all()
     return render_template('update_stock_price.html', stocks=stocks)
+
+@app.route('/process_pending_orders', methods=['POST'])
+def process_pending_orders():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    if not user.is_admin:
+        return redirect(url_for('index'))
+    pending_orders = Order.query.filter_by(status='pending').all()
+    for order in pending_orders:
+        if order.order_type == 'buy':
+            transaction = Transaction(user_id=order.user_id, stock_id=order.stock_id, amount=order.amount, price=order.price, transaction_type='buy')
+            db.session.add(transaction)
+            user = User.query.get(order.user_id)
+            user.cash_account -= order.amount * order.price
+        elif order.order_type == 'sell':
+            transaction = Transaction(user_id=order.user_id, stock_id=order.stock_id, amount=order.amount, price=order.price, transaction_type='sell')
+            db.session.add(transaction)
+            user = User.query.get(order.user_id)
+            user.cash_account += order.amount * order.price
+        order.status = 'completed'
+    try:
+        db.session.commit()
+        logger.info("Database commit successful.")
+    except Exception as e:
+        logger.error(f"Database commit failed: {e}")
+        db.session.rollback()
+    flash('Pending orders processed successfully.', 'success')
+    return redirect(url_for('admin'))
 
 if __name__ == '__main__':
     app.run(debug=True)
