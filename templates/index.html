@@ -1,36 +1,34 @@
 {% extends "base.html" %}
-{% block title %}Stock Trading System{% endblock %}
+{% block title %}Home{% endblock %}
 {% block content %}
-<h1>Available Stocks</h1>
-<table class="table table-striped">
+<h1>Stock Dashboard</h1>
+<table class="table">
     <thead>
         <tr>
+            <th>Company Name</th>
             <th>Ticker</th>
-            <th>Company</th>
-            <th>Price</th>
+            <th>Current Price</th>
             <th>Volume</th>
-            <th>Market Cap</th>
             <th>Actions</th>
         </tr>
     </thead>
     <tbody>
         {% for stock in stocks %}
         <tr>
-            <td>{{ stock.ticker }}</td>
             <td>{{ stock.company_name }}</td>
-            <td>{{ stock.current_price }}</td>
+            <td>{{ stock.ticker }}</td>
+            <td>${{ stock.current_price }}</td>
             <td>{{ stock.volume }}</td>
-            <td>{{ stock.volume * stock.current_price }}</td>
             <td>
                 <form action="{{ url_for('buy_stock') }}" method="post" style="display:inline;">
                     <input type="hidden" name="stock_id" value="{{ stock.id }}">
-                    <input type="number" name="amount" min="1" placeholder="Amount" required>
-                    <button type="submit" class="btn btn-success">Buy</button>
+                    <input type="number" name="amount" placeholder="Amount" required>
+                    <button type="submit" class="btn btn-primary">Buy</button>
                 </form>
                 <form action="{{ url_for('sell_stock') }}" method="post" style="display:inline;">
                     <input type="hidden" name="stock_id" value="{{ stock.id }}">
-                    <input type="number" name="amount" min="1" placeholder="Amount" required>
-                    <button type="submit" class="btn btn-danger">Sell</button>
+                    <input type="number" name="amount" placeholder="Amount" required>
+                    <button type="submit" class="btn btn-secondary">Sell</button>
                 </form>
             </td>
         </tr>

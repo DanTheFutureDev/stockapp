@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}View Stock{% endblock %}
+{% block content %}
+<h1>{{ stock.company_name }} ({{ stock.ticker }})</h1>
+<p>Current Price: ${{ stock.current_price }}</p>
+<p>Volume: {{ stock.volume }}</p>
+
+<form action="{{ url_for('buy_stock') }}" method="post">
+    <input type="hidden" name="stock_id" value="{{ stock.id }}">
+    <input type="number" name="amount" placeholder="Amount to buy" required>
+    <button type="submit" class="btn btn-primary">Buy</button>
+</form>
+
+<form action="{{ url_for('sell_stock') }}" method="post">
+    <input type="hidden" name="stock_id" value="{{ stock.id }}">
+    <input type="number" name="amount" placeholder="Amount to sell" required>
+    <button type="submit" class="btn btn-secondary">Sell</button>
+</form>
+
+<a href="{{ url_for('stock_history', stock_id=stock.id) }}" class="btn btn-info">View Stock History</a>
+{% endblock %}

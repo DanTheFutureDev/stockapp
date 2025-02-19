@@ -1,14 +1,17 @@
-from flask import Flask, render_template, redirect, url_for, request, session
+from flask import Flask, render_template, redirect, url_for, request, session, jsonify, flash
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
-from models import db, User, Stock, Transaction
-from stock_price_generator import update_stock_prices
+from models import db, User, Stock, Transaction, MarketHours, MarketSchedule
+from forms import RegistrationForm, LoginForm, StockForm, MarketHoursForm, MarketScheduleForm, AddCashForm, WithdrawCashForm, UpdateProfileForm
 from werkzeug.security import generate_password_hash, check_password_hash
-from forms import RegistrationForm, LoginForm, StockForm, MarketHoursForm, MarketScheduleForm, AddCashForm, WithdrawCashForm
 
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
+
+@app.template_filter('to_float')
+def to_float(value):
+    return float(value)
 
 @app.context_processor
 def inject_user():
@@ -60,7 +63,31 @@ def portfolio():
     user = User.query.get(session['user_id'])
     add_cash_form = AddCashForm()
     withdraw_cash_form = WithdrawCashForm()
-    return render_template('portfolio.html', user=user, add_cash_form=add_cash_form, withdraw_cash_form=withdraw_cash_form)
+    
+    # Calculate the net amount of each stock the user owns
+    stocks_owned = db.session.query(
+        Stock.id, Stock.company_name, Stock.ticker, Stock.current_price,
+        db.func.sum(Transaction.amount).label('total_amount')
+    ).join(Transaction).filter(
+        Transaction.user_id == user.id,
+        Transaction.transaction_type == 'buy'
+    ).group_by(Stock.id).all()
+    
+    stocks_sold = db.session.query(
+        Stock.id, db.func.sum(Transaction.amount).label('total_amount')
+    ).join(Transaction).filter(
+        Transaction.user_id == user.id,
+        Transaction.transaction_type == 'sell'
+    ).group_by(Stock.id).all()
+    
+    stocks_owned_dict = {stock.id: {'company_name': stock.company_name, 'ticker': stock.ticker, 'current_price': stock.current_price, 'total_amount': stock.total_amount} for stock in stocks_owned}
+    for stock in stocks_sold:
+        if stock.id in stocks_owned_dict:
+            stocks_owned_dict[stock.id]['total_amount'] -= stock.total_amount
+    
+    stocks_owned = [stock for stock in stocks_owned_dict.values() if stock['total_amount'] > 0]
+    
+    return render_template('portfolio.html', user=user, add_cash_form=add_cash_form, withdraw_cash_form=withdraw_cash_form, stocks_owned=stocks_owned)
 
 @app.route('/transactions')
 def transactions():
@@ -107,9 +134,20 @@ def market_hours():
         return redirect(url_for('index'))
     form = MarketHoursForm()
     if form.validate_on_submit():
-        # ...handle market hours update...
-        pass
-    return render_template('market_hours.html', form=form)
+        day_of_week = form.day_of_week.data
+        open_time = form.open_time.data
+        close_time = form.close_time.data
+        market_hours = MarketHours.query.filter_by(day_of_week=day_of_week).first()
+        if market_hours:
+            market_hours.open_time = open_time
+            market_hours.close_time = close_time
+        else:
+            market_hours = MarketHours(day_of_week=day_of_week, open_time=open_time, close_time=close_time)
+            db.session.add(market_hours)
+        db.session.commit()
+        return redirect(url_for('market_hours'))
+    market_hours = MarketHours.query.all()
+    return render_template('market_hours.html', form=form, market_hours=market_hours)
 
 @app.route('/market_schedule', methods=['GET', 'POST'])
 def market_schedule():
@@ -120,9 +158,20 @@ def market_schedule():
         return redirect(url_for('index'))
     form = MarketScheduleForm()
     if form.validate_on_submit():
-        # ...handle market schedule update...
-        pass
-    return render_template('market_schedule.html', form=form)
+        date = form.date.data
+        description = form.description.data
+        is_closed = form.is_closed.data
+        market_schedule = MarketSchedule.query.filter_by(date=date).first()
+        if market_schedule:
+            market_schedule.description = description
+            market_schedule.is_closed = is_closed
+        else:
+            market_schedule = MarketSchedule(date=date, description=description, is_closed=is_closed)
+            db.session.add(market_schedule)
+        db.session.commit()
+        return redirect(url_for('market_schedule'))
+    market_schedule = MarketSchedule.query.all()
+    return render_template('market_schedule.html', form=form, market_schedule=market_schedule)
 
 @app.route('/buy_stock', methods=['POST'])
 def buy_stock():
@@ -138,6 +187,8 @@ def buy_stock():
         transaction = Transaction(user_id=user.id, stock_id=stock.id, transaction_type='buy', amount=amount, price=stock.current_price)
         db.session.add(transaction)
         db.session.commit()
+    else:
+        flash('You do not have enough money to purchase this stock.', 'danger')
     return redirect(url_for('portfolio'))
 
 @app.route('/sell_stock', methods=['POST'])
@@ -148,11 +199,20 @@ def sell_stock():
     stock_id = request.form['stock_id']
     amount = int(request.form['amount'])
     stock = Stock.query.get(stock_id)
-    total_price = stock.current_price * amount
-    transaction = Transaction(user_id=user.id, stock_id=stock.id, transaction_type='sell', amount=amount, price=stock.current_price)
-    user.cash_account += total_price
-    db.session.add(transaction)
-    db.session.commit()
+    
+    # Calculate the total amount of stock the user owns
+    total_owned = db.session.query(db.func.sum(Transaction.amount)).filter_by(user_id=user.id, stock_id=stock_id, transaction_type='buy').scalar() or 0
+    total_sold = db.session.query(db.func.sum(Transaction.amount)).filter_by(user_id=user.id, stock_id=stock_id, transaction_type='sell').scalar() or 0
+    net_owned = total_owned - total_sold
+    
+    if amount > net_owned:
+        flash('You do not have enough stock to sell.', 'danger')
+    else:
+        total_price = stock.current_price * amount
+        transaction = Transaction(user_id=user.id, stock_id=stock.id, transaction_type='sell', amount=amount, price=stock.current_price)
+        user.cash_account += total_price
+        db.session.add(transaction)
+        db.session.commit()
     return redirect(url_for('portfolio'))
 
 @app.route('/add_cash', methods=['POST'])
@@ -179,6 +239,51 @@ def withdraw_cash():
             user.cash_account -= amount
             db.session.commit()
     return redirect(url_for('portfolio'))
+
+@app.route('/profile', methods=['GET', 'POST'])
+def profile():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    form = UpdateProfileForm()
+    if form.validate_on_submit():
+        user.email = form.email.data
+        user.password = generate_password_hash(form.password.data)
+        db.session.commit()
+        return redirect(url_for('profile'))
+    form.email.data = user.email
+    return render_template('profile.html', form=form)
+
+@app.route('/stock_history/<int:stock_id>')
+def stock_history(stock_id):
+    stock = Stock.query.get_or_404(stock_id)
+    return render_template('stock_history.html', stock=stock)
+
+@app.route('/view_stock/<int:stock_id>')
+def view_stock(stock_id):
+    stock = Stock.query.get_or_404(stock_id)
+    return render_template('view_stock.html', stock=stock)
+
+@app.route('/update_stock_price', methods=['GET', 'POST'])
+def update_stock_price():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    if not user.is_admin:
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        stock_id = request.form['stock_id']
+        new_price = float(request.form['new_price'])
+        stock = Stock.query.get(stock_id)
+        if stock:
+            stock.current_price = new_price
+            db.session.commit()
+            flash('Stock price updated successfully.', 'success')
+        else:
+            flash('Stock not found.', 'danger')
+        return redirect(url_for('update_stock_price'))
+    stocks = Stock.query.all()
+    return render_template('update_stock_price.html', stocks=stocks)
 
 if __name__ == '__main__':
     app.run(debug=True)

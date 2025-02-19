@@ -33,6 +33,16 @@ class Transaction(db.Model):
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
     # ...other fields...
 
+class TransactionHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    stock_id = db.Column(db.Integer, db.ForeignKey('stock.id'))
+    transaction_type = db.Column(db.String(10))  # 'buy' or 'sell'
+    amount = db.Column(db.Integer)
+    price = db.Column(db.Float)
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+    # ...other fields...
+
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -49,11 +59,15 @@ class MarketHours(db.Model):
     open_time = db.Column(db.Time)
     close_time = db.Column(db.Time)
 
-class TransactionHistory(db.Model):
+class MarketSchedule(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    date = db.Column(db.Date, unique=True)
+    description = db.Column(db.String(255))
+    is_closed = db.Column(db.Boolean, default=True)
+
+class StockPriceHistory(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
     stock_id = db.Column(db.Integer, db.ForeignKey('stock.id'))
-    transaction_type = db.Column(db.String(10))  # 'buy' or 'sell'
-    amount = db.Column(db.Integer)
     price = db.Column(db.Float)
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+    stock = db.relationship('Stock', backref=db.backref('price_history', lazy=True))

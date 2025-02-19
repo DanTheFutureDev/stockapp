@@ -2,3 +2,5 @@
 body {
     padding-top: 20px;
 }
+
+/* Remove table styles if they were added specifically for the stock dashboard */

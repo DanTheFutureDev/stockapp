@@ -4,9 +4,40 @@
 <h1>Market Schedule</h1>
 <form method="post" novalidate>
     {{ form.hidden_tag() }}
-    <!-- Add form fields for market schedule -->
+    <div class="form-group">
+        {{ form.date.label(class="form-label") }}
+        {{ form.date(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ form.description.label(class="form-label") }}
+        {{ form.description(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ form.is_closed.label(class="form-label") }}
+        {{ form.is_closed(class="form-control") }}
+    </div>
     <div class="form-group">
         {{ form.submit(class="btn btn-primary") }}
     </div>
 </form>
+
+<h2>Current Market Schedule</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Market Closed</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for schedule in market_schedule %}
+        <tr>
+            <td>{{ schedule.date }}</td>
+            <td>{{ schedule.description }}</td>
+            <td>{{ 'Yes' if schedule.is_closed else 'No' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% endblock %}

@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, IntegerField, FloatField
+from wtforms import StringField, PasswordField, SubmitField, IntegerField, FloatField, TimeField, BooleanField
 from wtforms.validators import DataRequired, Email, EqualTo
 
 class RegistrationForm(FlaskForm):
@@ -24,12 +24,14 @@ class StockForm(FlaskForm):
 
 class MarketHoursForm(FlaskForm):
     day_of_week = StringField('Day of Week', validators=[DataRequired()])
-    open_time = StringField('Open Time', validators=[DataRequired()])
-    close_time = StringField('Close Time', validators=[DataRequired()])
+    open_time = TimeField('Open Time', validators=[DataRequired()], format='%H:%M')
+    close_time = TimeField('Close Time', validators=[DataRequired()], format='%H:%M')
     submit = SubmitField('Update')
 
 class MarketScheduleForm(FlaskForm):
-    # Add fields for market schedule
+    date = StringField('Date (YYYY-MM-DD)', validators=[DataRequired()])
+    description = StringField('Description', validators=[DataRequired()])
+    is_closed = BooleanField('Market Closed')
     submit = SubmitField('Update')
 
 class AddCashForm(FlaskForm):
@@ -39,3 +41,9 @@ class AddCashForm(FlaskForm):
 class WithdrawCashForm(FlaskForm):
     amount = FloatField('Amount', validators=[DataRequired()])
     submit = SubmitField('Withdraw Cash')
+
+class UpdateProfileForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('New Password', validators=[DataRequired()])
+    confirm_password = PasswordField('Confirm New Password', validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Update Profile')

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Update Stock Prices{% endblock %}
+{% block content %}
+<h1>Update Stock Prices</h1>
+<form action="{{ url_for('update_stock_price') }}" method="post">
+    <div class="form-group">
+        <label for="stock_id">Stock</label>
+        <select name="stock_id" id="stock_id" class="form-control" required>
+            {% for stock in stocks %}
+            <option value="{{ stock.id }}">{{ stock.company_name }} ({{ stock.ticker }})</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="new_price">New Price</label>
+        <input type="number" step="0.01" name="new_price" id="new_price" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Update Price</button>
+</form>
+{% endblock %}

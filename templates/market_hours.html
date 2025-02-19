@@ -20,4 +20,24 @@
         {{ form.submit(class="btn btn-primary") }}
     </div>
 </form>
+
+<h2>Current Market Hours</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Day of Week</th>
+            <th>Open Time</th>
+            <th>Close Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for mh in market_hours %}
+        <tr>
+            <td>{{ mh.day_of_week }}</td>
+            <td>{{ mh.open_time }}</td>
+            <td>{{ mh.close_time }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% endblock %}
