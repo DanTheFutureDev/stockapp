@@ -3,6 +3,9 @@
 {% block content %}
 <h1>{{ stock.company_name }} ({{ stock.ticker }})</h1>
 <p>Current Price: ${{ stock.current_price }}</p>
+<p>Opening Price: ${{ stock.opening_price }}</p>
+<p>High Price: ${{ stock.high_price }}</p>
+<p>Low Price: ${{ stock.low_price }}</p>
 <p>Volume: {{ stock.volume }}</p>
 
 <form action="{{ url_for('buy_stock') }}" method="post">

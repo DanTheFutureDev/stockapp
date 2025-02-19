@@ -30,6 +30,7 @@
                     <input type="number" name="amount" placeholder="Amount" required>
                     <button type="submit" class="btn btn-secondary">Sell</button>
                 </form>
+                <a href="{{ url_for('view_stock', stock_id=stock.id) }}" class="btn btn-info">View Details</a>
             </td>
         </tr>
         {% endfor %}
