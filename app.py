@@ -1,7 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, request, session, jsonify, flash
 from flask_sqlalchemy import SQLAlchemy
 from config import Config
-from models import db, User, Stock, Transaction, Order, MarketHours, MarketSchedule
+from models import db, User, Stock, StockHistory, Transaction, Order, MarketHours, MarketSchedule
 from forms import RegistrationForm, LoginForm, StockForm, MarketHoursForm, MarketScheduleForm, AddCashForm, WithdrawCashForm, UpdateProfileForm
 from werkzeug.security import generate_password_hash, check_password_hash
 import logging
@@ -287,7 +287,8 @@ def profile():
 @app.route('/stock_history/<int:stock_id>')
 def stock_history(stock_id):
     stock = Stock.query.get_or_404(stock_id)
-    return render_template('stock_history.html', stock=stock)
+    history = StockHistory.query.filter_by(stock_id=stock.id).order_by(StockHistory.timestamp.desc()).all()
+    return render_template('stock_history.html', stock=stock, history=history)
 
 @app.route('/view_stock/<int:stock_id>')
 def view_stock(stock_id):
@@ -314,6 +315,23 @@ def update_stock_price():
         return redirect(url_for('update_stock_price'))
     stocks = Stock.query.all()
     return render_template('update_stock_price.html', stocks=stocks)
+
+@app.route('/edit_stock_price/<int:stock_id>', methods=['POST'])
+def edit_stock_price(stock_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    if not user.is_admin:
+        return redirect(url_for('index'))
+    stock = Stock.query.get_or_404(stock_id)
+    new_price = float(request.form['new_price'])
+    stock.current_price = new_price
+    # Log the price change in StockHistory
+    stock_history = StockHistory(stock_id=stock.id, price=new_price)
+    db.session.add(stock_history)
+    db.session.commit()
+    flash('Stock price updated successfully.', 'success')
+    return redirect(url_for('view_stock', stock_id=stock.id))
 
 @app.route('/process_pending_orders', methods=['POST'])
 def process_pending_orders():
@@ -345,4 +363,4 @@ def process_pending_orders():
     return redirect(url_for('admin'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)

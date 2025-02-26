@@ -1,19 +1,21 @@
 {% extends "base.html" %}
 {% block title %}Stock History{% endblock %}
 {% block content %}
-<h1>Stock History for {{ stock.company_name }} ({{ stock.ticker }})</h1>
+<h1>{{ stock.company_name }} ({{ stock.ticker }})</h1>
+<p>Current Price: ${{ stock.current_price }}</p>
+<h2>Price History</h2>
 <table class="table">
     <thead>
         <tr>
-            <th>Date</th>
             <th>Price</th>
+            <th>Timestamp</th>
         </tr>
     </thead>
     <tbody>
-        {% for price in stock.price_history %}
+        {% for history in stock.history %}
         <tr>
-            <td>{{ price.timestamp }}</td>
-            <td>${{ price.price }}</td>
+            <td>${{ history.price }}</td>
+            <td>{{ history.timestamp }}</td>
         </tr>
         {% endfor %}
     </tbody>
