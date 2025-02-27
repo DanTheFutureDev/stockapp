@@ -5,6 +5,7 @@ from models import db, User, Stock, StockHistory, Transaction, Order, MarketHour
 from forms import RegistrationForm, LoginForm, StockForm, MarketHoursForm, MarketScheduleForm, AddCashForm, WithdrawCashForm, UpdateProfileForm
 from werkzeug.security import generate_password_hash, check_password_hash
 import logging
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -13,6 +14,16 @@ db.init_app(app)
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+def start_scheduler():
+    from stock_price_generator import update_stock_prices  # Import within the function to avoid circular import
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(update_stock_prices, 'interval', minutes=1)  # Update every minute
+    scheduler.start()
+    logger.info("Scheduler started and job added to update stock prices every minute.")
+
+# Start the scheduler
+start_scheduler()
 
 @app.template_filter('to_float')
 def to_float(value):
