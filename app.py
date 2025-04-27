@@ -15,10 +15,32 @@ db.init_app(app)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+def process_pending_orders_job():
+    pending_orders = Order.query.filter_by(status='pending').all()
+    for order in pending_orders:
+        if order.order_type == 'buy':
+            transaction = Transaction(user_id=order.user_id, stock_id=order.stock_id, amount=order.amount, price=order.price, transaction_type='buy')
+            db.session.add(transaction)
+            user = User.query.get(order.user_id)
+            user.cash_account -= order.amount * order.price
+        elif order.order_type == 'sell':
+            transaction = Transaction(user_id=order.user_id, stock_id=order.stock_id, amount=order.amount, price=order.price, transaction_type='sell')
+            db.session.add(transaction)
+            user = User.query.get(order.user_id)
+            user.cash_account += order.amount * order.price
+        order.status = 'completed'
+    try:
+        db.session.commit()
+        logger.info("Pending orders processed automatically.")
+    except Exception as e:
+        logger.error(f"Automatic processing of pending orders failed: {e}")
+        db.session.rollback()
+
+# Add the job to the scheduler
 def start_scheduler():
     from stock_price_generator import update_stock_prices  # Import within the function to avoid circular import
     scheduler = BackgroundScheduler()
-    scheduler.add_job(update_stock_prices, 'interval', minutes=1)  # Update every minute
+    scheduler.add_job(update_stock_prices, 'interval', minutes=1)  # Update stock prices every minute
     scheduler.start()
     logger.info("Scheduler started and job added to update stock prices every minute.")
 
@@ -304,7 +326,12 @@ def stock_history(stock_id):
 @app.route('/view_stock/<int:stock_id>')
 def view_stock(stock_id):
     stock = Stock.query.get_or_404(stock_id)
-    return render_template('view_stock.html', stock=stock)
+    return render_template(
+        'view_stock.html',
+        stock=stock,
+        high_price=stock.high_price,
+        low_price=stock.low_price
+    )
 
 @app.route('/update_stock_price', methods=['GET', 'POST'])
 def update_stock_price():
@@ -366,9 +393,9 @@ def process_pending_orders():
         order.status = 'completed'
     try:
         db.session.commit()
-        logger.info("Database commit successful.")
+        logger.info("Manual processing of pending orders successful.")
     except Exception as e:
-        logger.error(f"Database commit failed: {e}")
+        logger.error(f"Manual processing of pending orders failed: {e}")
         db.session.rollback()
     flash('Pending orders processed successfully.', 'success')
     return redirect(url_for('admin'))

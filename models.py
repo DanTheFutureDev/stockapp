@@ -15,11 +15,13 @@ class User(db.Model):
 
 class Stock(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    company_name = db.Column(db.String(100))
-    ticker = db.Column(db.String(10), unique=True)
-    volume = db.Column(db.Integer)
-    initial_price = db.Column(db.Float)
-    current_price = db.Column(db.Float)
+    company_name = db.Column(db.String(100), nullable=False)
+    ticker = db.Column(db.String(10), nullable=False, unique=True)
+    volume = db.Column(db.Integer, nullable=False)
+    initial_price = db.Column(db.Float, nullable=False)
+    current_price = db.Column(db.Float, nullable=False)
+    high_price = db.Column(db.Float, nullable=True)  # New field
+    low_price = db.Column(db.Float, nullable=True)   # New field
     transactions = db.relationship('Transaction', backref='stock', lazy=True)
     orders = db.relationship('Order', backref='stock', lazy=True)
 
