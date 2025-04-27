@@ -20,10 +20,6 @@ class Stock(db.Model):
     volume = db.Column(db.Integer)
     initial_price = db.Column(db.Float)
     current_price = db.Column(db.Float)
-    opening_price = db.Column(db.Float)
-    high_price = db.Column(db.Float)
-    low_price = db.Column(db.Float)
-
     transactions = db.relationship('Transaction', backref='stock', lazy=True)
     orders = db.relationship('Order', backref='stock', lazy=True)
 
